@@ -1,0 +1,40 @@
+digraph "CFG for 'test' function" {
+	label="CFG for 'test' function";
+
+	Node0x3e966a0 [shape=record,label="{entry:\l  %arrayidx = getelementptr inbounds i32* %A, i64 0\l  %0 = load i32* %arrayidx, align 4\l  %arrayidx1 = getelementptr inbounds i32* %B, i64 0\l  %1 = load i32* %arrayidx1, align 4\l  %add = add nsw i32 %0, %1\l  %arrayidx2 = getelementptr inbounds i32* %C, i64 0\l  store i32 %add, i32* %arrayidx2, align 4\l  br label %do.body\l}"];
+	Node0x3e966a0 -> Node0x3e99f50;
+	Node0x3e99f50 [shape=record,label="{do.body:                                          \l  %k.0 = phi i32 [ 0, %entry ], [ %add38, %do.cond39 ]\l  %call = call i32 (i32, ...)* bitcast (i32 (...)* @get_global_id to i32 (i32, ...)*)(i32 0)\l  %cmp = icmp sgt i32 %n, undef\l  br i1 %cmp, label %if.then, label %if.else21\l|{<s0>T|<s1>F}}"];
+	Node0x3e99f50:s0 -> Node0x3e9b490;
+	Node0x3e99f50:s1 -> Node0x3e9b560;
+	Node0x3e9b490 [shape=record,label="{if.then:                                          \l  %idxprom = sext i32 %call to i64\l  %arrayidx3 = getelementptr inbounds i32* %C, i64 %idxprom\l  %2 = load i32* %arrayidx3, align 4\l  %mul = mul nsw i32 2, %2\l  %idxprom4 = sext i32 %call to i64\l  %arrayidx5 = getelementptr inbounds i32* %C, i64 %idxprom4\l  store i32 %mul, i32* %arrayidx5, align 4\l  %cmp6 = icmp sgt i32 %call, undef\l  br i1 %cmp6, label %if.then7, label %if.else\l|{<s0>T|<s1>F}}"];
+	Node0x3e9b490:s0 -> Node0x3e9bc30;
+	Node0x3e9b490:s1 -> Node0x3e9bd30;
+	Node0x3e9bc30 [shape=record,label="{if.then7:                                         \l  %idxprom8 = sext i32 %call to i64\l  %arrayidx9 = getelementptr inbounds i32* %A, i64 %idxprom8\l  %3 = load i32* %arrayidx9, align 4\l  %idxprom10 = sext i32 %call to i64\l  %arrayidx11 = getelementptr inbounds i32* %B, i64 %idxprom10\l  %4 = load i32* %arrayidx11, align 4\l  %add12 = add nsw i32 %3, %4\l  %idxprom13 = sext i32 %call to i64\l  %arrayidx14 = getelementptr inbounds i32* %C, i64 %idxprom13\l  store i32 %add12, i32* %arrayidx14, align 4\l  br label %if.end\l}"];
+	Node0x3e9bc30 -> Node0x3e9c6d0;
+	Node0x3e9bd30 [shape=record,label="{if.else:                                          \l  %idxprom15 = sext i32 %call to i64\l  %arrayidx16 = getelementptr inbounds i32* %A, i64 %idxprom15\l  %5 = load i32* %arrayidx16, align 4\l  %idxprom17 = sext i32 %call to i64\l  %arrayidx18 = getelementptr inbounds i32* %B, i64 %idxprom17\l  %6 = load i32* %arrayidx18, align 4\l  %sub = sub nsw i32 %5, %6\l  %idxprom19 = sext i32 %call to i64\l  %arrayidx20 = getelementptr inbounds i32* %C, i64 %idxprom19\l  store i32 %sub, i32* %arrayidx20, align 4\l  br label %if.end\l}"];
+	Node0x3e9bd30 -> Node0x3e9c6d0;
+	Node0x3e9c6d0 [shape=record,label="{if.end:                                           \l  br label %if.end37\l}"];
+	Node0x3e9c6d0 -> Node0x3e9ceb0;
+	Node0x3e9b560 [shape=record,label="{if.else21:                                        \l  br label %do.body22\l}"];
+	Node0x3e9b560 -> Node0x3e9cfc0;
+	Node0x3e9cfc0 [shape=record,label="{do.body22:                                        \l  %k.1 = phi i32 [ %k.0, %if.else21 ], [ %k.2, %do.cond ]\l  %idxprom23 = sext i32 %k.1 to i64\l  %arrayidx24 = getelementptr inbounds i32* %A, i64 %idxprom23\l  %7 = load i32* %arrayidx24, align 4\l  %idxprom25 = sext i32 %k.1 to i64\l  %arrayidx26 = getelementptr inbounds i32* %B, i64 %idxprom25\l  %8 = load i32* %arrayidx26, align 4\l  %add27 = add nsw i32 %7, %8\l  %idxprom28 = sext i32 %k.1 to i64\l  %arrayidx29 = getelementptr inbounds i32* %C, i64 %idxprom28\l  store i32 %add27, i32* %arrayidx29, align 4\l  %cmp30 = icmp slt i32 %call, %k.1\l  br i1 %cmp30, label %if.then31, label %if.else33\l|{<s0>T|<s1>F}}"];
+	Node0x3e9cfc0:s0 -> Node0x3e9c190;
+	Node0x3e9cfc0:s1 -> Node0x3e9def0;
+	Node0x3e9c190 [shape=record,label="{if.then31:                                        \l  %mul32 = mul nsw i32 2, %call\l  br label %if.end35\l}"];
+	Node0x3e9c190 -> Node0x3e9e130;
+	Node0x3e9def0 [shape=record,label="{if.else33:                                        \l  %mul34 = mul nsw i32 2, %k.1\l  br label %if.end35\l}"];
+	Node0x3e9def0 -> Node0x3e9e130;
+	Node0x3e9e130 [shape=record,label="{if.end35:                                         \l  %k.2 = phi i32 [ %mul32, %if.then31 ], [ %mul34, %if.else33 ]\l  br label %do.cond\l}"];
+	Node0x3e9e130 -> Node0x3e9d170;
+	Node0x3e9d170 [shape=record,label="{do.cond:                                          \l  %cmp36 = icmp slt i32 %k.2, undef\l  br i1 %cmp36, label %do.body22, label %do.end\l|{<s0>T|<s1>F}}"];
+	Node0x3e9d170:s0 -> Node0x3e9cfc0;
+	Node0x3e9d170:s1 -> Node0x3e9e560;
+	Node0x3e9e560 [shape=record,label="{do.end:                                           \l  br label %if.end37\l}"];
+	Node0x3e9e560 -> Node0x3e9ceb0;
+	Node0x3e9ceb0 [shape=record,label="{if.end37:                                         \l  %k.3 = phi i32 [ %k.0, %if.end ], [ %k.2, %do.end ]\l  %add38 = add nsw i32 %k.3, 2\l  br label %do.cond39\l}"];
+	Node0x3e9ceb0 -> Node0x3e9a0c0;
+	Node0x3e9a0c0 [shape=record,label="{do.cond39:                                        \l  %cmp40 = icmp slt i32 %n, undef\l  br i1 %cmp40, label %do.body, label %do.end41\l|{<s0>T|<s1>F}}"];
+	Node0x3e9a0c0:s0 -> Node0x3e99f50;
+	Node0x3e9a0c0:s1 -> Node0x3e9e960;
+	Node0x3e9e960 [shape=record,label="{do.end41:                                         \l  ret void\l}"];
+}
