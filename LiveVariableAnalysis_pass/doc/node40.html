@@ -1,0 +1,396 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!--Converted with LaTeX2HTML 2008 (1.71)
+original version by:  Nikos Drakos, CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=windows-1252">
+<title>11 Liveness Analysis</title>
+<meta name="description" content="11 Liveness Analysis">
+<meta name="keywords" content="notes">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+
+<meta name="Generator" content="LaTeX2HTML v2008">
+<meta http-equiv="Content-Style-Type" content="text/css">
+
+<link rel="STYLESHEET" href="node40_files/notes.css">
+
+<link rel="next" href="http://lambda.uta.edu/cse5317/notes/node41.html">
+<link rel="previous" href="http://lambda.uta.edu/cse5317/notes/node39.html">
+<link rel="up" href="http://lambda.uta.edu/cse5317/notes/notes.html">
+<link rel="next" href="http://lambda.uta.edu/cse5317/notes/node41.html">
+</head>
+
+<body>
+<!--Navigation Panel-->
+<a name="tex2html597" href="http://lambda.uta.edu/cse5317/notes/node41.html">
+<img alt="next" src="node40_files/next.png" align="BOTTOM" border="0" height="24" width="37"></a> 
+<a name="tex2html593" href="http://lambda.uta.edu/cse5317/notes/notes.html">
+<img alt="up" src="node40_files/up.png" align="BOTTOM" border="0" height="24" width="26"></a> 
+<a name="tex2html587" href="http://lambda.uta.edu/cse5317/notes/node39.html">
+<img alt="previous" src="node40_files/prev.png" align="BOTTOM" border="0" height="24" width="63"></a> 
+<a name="tex2html595" href="http://lambda.uta.edu/cse5317/notes/node1.html">
+<img alt="contents" src="node40_files/contents.png" align="BOTTOM" border="0" height="24" width="65"></a>  
+<br>
+<b> Next:</b> <a name="tex2html598" href="http://lambda.uta.edu/cse5317/notes/node41.html">12 Register Allocation</a>
+<b> Up:</b> <a name="tex2html594" href="http://lambda.uta.edu/cse5317/notes/notes.html">CSE 5317/4305: Design and</a>
+<b> Previous:</b> <a name="tex2html588" href="http://lambda.uta.edu/cse5317/notes/node39.html">10 Instruction Selection</a>
+ &nbsp; <b>  <a name="tex2html596" href="http://lambda.uta.edu/cse5317/notes/node1.html">Contents</a></b> 
+<br>
+<br>
+<!--End of Navigation Panel-->
+
+<h1><a name="SECTION000120000000000000000">
+11 Liveness Analysis</a>
+</h1>
+
+<p>
+When we generated IR trees, we assumed that we have a very large number
+of temporary variables stored in registers.  Of course this is not true for real
+machines. In particular CISC machines have very few registers (Pentium
+has 6 general registers only).  So it's highly desirable to use one
+machine register for multiple temporary variables (instead of using
+one register for one temporary variable). Consider this program:
+</p><pre>1.     a := 0
+2. L1: b := a+1
+3.     c := c+b
+4.     a := b*2
+5.     if a&lt;10 goto L1
+6.     return c
+</pre>
+Obviously we need a maximum of three registers, one for each variable
+<code>a</code>, <code>b</code>, and <code>c</code>.  But we can do better if we use
+two registers: one for <code>c</code> and one for both <code>a</code> and
+<code>b</code>.  This is possible because after <code>a+1</code> is computed in statement 2 and during statements 3 and 4, the
+value of <code>a</code> is not used, and these are the only places where
+<code>b</code> is used. We say that variables <code>a</code> and <code>b</code> do not
+<em>interfere</em> if they are not <em>live</em> during the same periods in
+the program.  In that case, they can occupy the same
+register.  A variable <code>x</code> is <em>live</em> at a particular point
+(statement) in a program, if it holds a value that may be needed in
+the future. That is, <code>x</code> is live at a particular point if there is a path
+(possibly following gotos) from this point to a statement that uses <code>x</code> and
+there is no assignment to <code>x</code> in any statement in the path
+(because if there was an assignment to <code>x</code>, the old value of
+<code>x</code> is discarded before it is used).  For example, <code>a</code> is
+live in 2 (because it's the place where it is used), not live in 3 and 4
+(because it is assigned a value in 4 before it is used in 5), and live
+again in 5. Variable <code>b</code> is live in 3 and 4 only, and variable
+<code>c</code> is live in 2, 3, 4, 5, and 6 (it's live in 2 because there is a path
+to 3 where it is used). In general, let's say that you have a use
+of a variable <code>v</code> in line <code>n</code>:
+<pre>k.    v := ...
+      ...
+n.    x := ... v ..
+</pre>
+(Here <code>v</code> is used in the source of an assignment but it may have also been
+used in a function call, return statement, etc.) We try to find an
+assignment <code>v := ...</code> such that there is path from this statement
+to line <code>n</code> and there is no other assignment to <code>v</code>
+along this path. In that case, we say that <code>v</code> is live
+along this path (immediately after the asignment until and
+including line <code>n</code>). We do that for every use of <code>v</code>
+and the union of all these regions in which <code>v</code> is live gives
+us the life of <code>v</code>. In our example, the life of variables are:
+<br><table border="1" cellpadding="3">
+<tbody><tr><td align="CENTER">&nbsp;</td>
+<td align="CENTER">a</td>
+<td align="CENTER">b</td>
+<td align="CENTER">c</td>
+</tr>
+<tr><td align="CENTER">1</td>
+<td align="CENTER">&nbsp;</td>
+<td align="CENTER">&nbsp;</td>
+<td align="CENTER">X</td>
+</tr>
+<tr><td align="CENTER">2</td>
+<td align="CENTER">X</td>
+<td align="CENTER">&nbsp;</td>
+<td align="CENTER">X</td>
+</tr>
+<tr><td align="CENTER">3</td>
+<td align="CENTER">&nbsp;</td>
+<td align="CENTER">X</td>
+<td align="CENTER">X</td>
+</tr>
+<tr><td align="CENTER">4</td>
+<td align="CENTER">&nbsp;</td>
+<td align="CENTER">X</td>
+<td align="CENTER">X</td>
+</tr>
+<tr><td align="CENTER">5</td>
+<td align="CENTER">X</td>
+<td align="CENTER">&nbsp;</td>
+<td align="CENTER">X</td>
+</tr>
+<tr><td align="CENTER">6</td>
+<td align="CENTER">&nbsp;</td>
+<td align="CENTER">&nbsp;</td>
+<td align="CENTER">X</td>
+</tr>
+</tbody></table>
+<br>
+<p>
+Let's formalize the liveness of a variable.  The first thing to do is
+to construct the <em>control flow graph</em> (CFG) of a program. The CFG
+nodes are individual statements (or maybe basic blocks) and the graph
+edges represent potential flow of control.  The outgoing edges of a
+node <i>n</i> are <i>succ</i>[<i>n</i>] and the ingoing edges are <i>pred</i>[<i>n</i>]. For
+example, <!-- MATH
+ $succ[5]=[6,2]$
+ -->
+<i>succ</i>[5] = [6, 2] and <!-- MATH
+ $pred[5]=[4]$
+ -->
+<i>pred</i>[5] = [4].  For each CFG node <i>n</i> (a
+statement) we define <i>use</i>[<i>n</i>] to be all the variables used (read) in
+this statement and <i>def</i>[<i>n</i>] all the variables assigned a value
+(written) in this statement. For example, <!-- MATH
+ $use[3]=[b,c]$
+ -->
+<i>use</i>[3] = [<i>b</i>, <i>c</i>] and
+<!-- MATH
+ $def[3]=[c]$
+ -->
+<i>def</i>[3] = [<i>c</i>].
+
+</p><p>
+We say that variable <i>v</i> is live at a statement <i>n</i> if there is a path
+in the CFG from this statement to a statement <i>m</i> such that <!-- MATH
+ $v\in
+use[m]$
+ -->
+<i>v</i> <img src="node40_files/img3.png" alt="$ \in$" align="MIDDLE" border="0" height="35" width="17"> <i>use</i>[<i>m</i>] and for each <!-- MATH
+ $n\leq k< m:\, v\not\in def[k]$
+ -->
+<i>n</i> <img src="node40_files/img10.png" alt="$ \leq$" align="MIDDLE" border="0" height="35" width="19"> <i>k</i> &lt; <i>m</i> : &nbsp;<i>v</i> <img src="node40_files/img11.png" alt="$ \not\in$" align="MIDDLE" border="0" height="35" width="17"><i>def</i>[<i>k</i>].  That is, there
+is no assignment to <i>v</i> in the path from <i>n</i> to <i>m</i>.  For example,
+<code>c</code> is alive in 4 since it is used in 6 and there is no
+assignment to <code>c</code> in the path from 4 to 6.
+
+</p><p>
+The <em>liveness analysis</em> analyzes a CFG to determine which places
+variables are live or not. It is a data flow analysis since it flows
+around the edges of the CFG information about variables (in this case
+information about the liveness of variables). For each CFG node <i>n</i> we
+derive two sets: <i>in</i>[<i>n</i>] (live-in) and <i>out</i>[<i>n</i>] (live-out). The set
+<i>in</i>[<i>n</i>] gives all variables that are live before the execution of
+statement <i>n</i> and <i>out</i>[<i>n</i>] gives all variables that are live after the
+execution of statement <i>n</i>. So the goal here is to compute these sets
+from the sets <i>succ</i>, <i>use</i> and <i>def</i>. To do this, we consider the
+properties of <i>in</i> and <i>out</i>:
+
+</p><ol>
+<li><!-- MATH
+ $v\in use[n]\Rightarrow v\in in[n]$
+ -->
+<i>v</i> <img src="node40_files/img3.png" alt="$ \in$" align="MIDDLE" border="0" height="35" width="17"> <i>use</i>[<i>n</i>] <img src="node40_files/img12.png" alt="$ \Rightarrow$" align="BOTTOM" border="0" height="19" width="24"> <i>v</i> <img src="node40_files/img3.png" alt="$ \in$" align="MIDDLE" border="0" height="35" width="17"> <i>in</i>[<i>n</i>]. That is, if <i>v</i> is used in <i>n</i> then is live-in in <i>n</i>
+(regardless whether it is defined in <i>n</i>).
+</li>
+<li><!-- MATH
+ $v\in (out[n]-def[n]) \Rightarrow v\in in[n]$
+ -->
+<i>v</i> <img src="node40_files/img3.png" alt="$ \in$" align="MIDDLE" border="0" height="35" width="17"> (<i>out</i>[<i>n</i>] - <i>def</i>[<i>n</i>]) <img src="node40_files/img12.png" alt="$ \Rightarrow$" align="BOTTOM" border="0" height="19" width="24"> <i>v</i> <img src="node40_files/img3.png" alt="$ \in$" align="MIDDLE" border="0" height="35" width="17"> <i>in</i>[<i>n</i>]. That is, if <i>v</i> is live
+after the execution of <i>n</i> and is not defined in <i>n</i>, then <i>v</i> is live before
+the execution of <i>n</i>.
+</li>
+<li>for each <!-- MATH
+ $s\in succ[n]:\; v\in in[s]\Rightarrow v\in out[n]$
+ -->
+<i>s</i> <img src="node40_files/img3.png" alt="$ \in$" align="MIDDLE" border="0" height="35" width="17"> <i>succ</i>[<i>n</i>] : &nbsp;<i>v</i> <img src="node40_files/img3.png" alt="$ \in$" align="MIDDLE" border="0" height="35" width="17"> <i>in</i>[<i>s</i>] <img src="node40_files/img12.png" alt="$ \Rightarrow$" align="BOTTOM" border="0" height="19" width="24"> <i>v</i> <img src="node40_files/img3.png" alt="$ \in$" align="MIDDLE" border="0" height="35" width="17"> <i>out</i>[<i>n</i>]. This
+reflects the formal definition of the liveness of variable <i>v</i>.
+</li>
+</ol>
+The algorithm to compute <i>in</i> and <i>out</i> is the following:
+<p><!-- MATH
+ \begin{displaymath}
+\begin{array}{l}
+{\bf foreach}\; n:\; in[n]\leftarrow\emptyset; out[n]\leftarrow\emptyset\\
+{\bf repeat}\\
+\hspace{3ex} {\bf foreach}\; n:\\
+\hspace{10ex} in'[n] \leftarrow in[n]\\
+\hspace{10ex} out'[n] \leftarrow out[n]\\
+\hspace{10ex} in[n] \leftarrow use[n]\cup (out[n]-def[n])\\
+\hspace{10ex} out[n] \leftarrow \bigcup_{s\in succ[n]} in[s]\\
+{\bf until}\; in'=in \wedge out'=out
+\end{array}
+\end{displaymath}
+ -->
+</p>
+<div align="CENTER">
+<table>
+<tbody><tr valign="MIDDLE"><td align="LEFT"><img src="node40_files/img13.png" alt="$\displaystyle \bf foreach$" align="MIDDLE" border="0" height="35" width="72"> &nbsp;<i>n</i> : &nbsp;<i>in</i>[<i>n</i>] <img src="node40_files/img14.png" alt="$\displaystyle \leftarrow$" align="MIDDLE" border="0" height="35" width="24"> <img src="node40_files/img15.png" alt="$\displaystyle \emptyset$" align="MIDDLE" border="0" height="39" width="14">;<i>out</i>[<i>n</i>] <img src="node40_files/img14.png" alt="$\displaystyle \leftarrow$" align="MIDDLE" border="0" height="35" width="24"> <img src="node40_files/img15.png" alt="$\displaystyle \emptyset$" align="MIDDLE" border="0" height="39" width="14"></td>
+</tr>
+<tr valign="MIDDLE"><td align="LEFT"><img src="node40_files/img16.png" alt="$\displaystyle \bf repeat$" align="MIDDLE" border="0" height="35" width="64"></td>
+</tr>
+<tr valign="MIDDLE"><td align="LEFT">&nbsp; <img src="node40_files/img13.png" alt="$\displaystyle \bf foreach$" align="MIDDLE" border="0" height="35" width="72"> &nbsp;<i>n</i> :</td>
+</tr>
+<tr valign="MIDDLE"><td align="LEFT">&nbsp; <i>in'</i>[<i>n</i>] <img src="node40_files/img14.png" alt="$\displaystyle \leftarrow$" align="MIDDLE" border="0" height="35" width="24"> <i>in</i>[<i>n</i>]</td>
+</tr>
+<tr valign="MIDDLE"><td align="LEFT">&nbsp; <i>out'</i>[<i>n</i>] <img src="node40_files/img14.png" alt="$\displaystyle \leftarrow$" align="MIDDLE" border="0" height="35" width="24"> <i>out</i>[<i>n</i>]</td>
+</tr>
+<tr valign="MIDDLE"><td align="LEFT">&nbsp; <i>in</i>[<i>n</i>] <img src="node40_files/img14.png" alt="$\displaystyle \leftarrow$" align="MIDDLE" border="0" height="35" width="24"> <i>use</i>[<i>n</i>] <img src="node40_files/img17.png" alt="$\displaystyle \cup$" align="MIDDLE" border="0" height="35" width="17"> (<i>out</i>[<i>n</i>] - <i>def</i>[<i>n</i>])</td>
+</tr>
+<tr valign="MIDDLE"><td align="LEFT">&nbsp; <i>out</i>[<i>n</i>] <img src="node40_files/img14.png" alt="$\displaystyle \leftarrow$" align="MIDDLE" border="0" height="35" width="24"> <img src="node40_files/img18.png" alt="$\displaystyle \bigcup_{{s\in succ[n]}}^{}$" align="MIDDLE" border="0" height="60" width="61"><i>in</i>[<i>s</i>]</td>
+</tr>
+<tr valign="MIDDLE"><td align="LEFT"><img src="node40_files/img19.png" alt="$\displaystyle \bf until$" align="MIDDLE" border="0" height="35" width="48"> &nbsp;<i>in'</i> = <i>in</i> <img src="node40_files/img20.png" alt="$\displaystyle \wedge$" align="MIDDLE" border="0" height="35" width="17"> <i>out'</i> = <i>out</i></td>
+</tr>
+</tbody></table>
+</div><p></p>
+That is, we store the old values of <i>in</i> and <i>out</i> into <i>in'</i> and
+<i>out'</i> and we repeatedly execute the loop until we can't add any more
+elements.  The algorithm converges very fast if we consider the CFG
+nodes in the reverse order (when is possible), ie, in the order 6, 5,
+4, 3, 2, 1. See Table 10.6 in the textbook for an example.
+
+<p>
+The life of a variable can be directly derived from vector <i>in</i>:
+if <!-- MATH
+ $v\in in[n]$
+ -->
+<i>v</i> <img src="node40_files/img3.png" alt="$ \in$" align="MIDDLE" border="0" height="35" width="17"> <i>in</i>[<i>n</i>] then <i>v</i> is live on line <i>n</i>.
+Then, from the variable lifes we can compute the <em>interference graph</em>.
+The nodes of this graph are the program variables and for
+each node <i>v</i> and <i>w</i> there is an interference edge if the lives of
+the variables <i>v</i> and <i>w</i> overlap in at least one program point (statement).  For each CFG
+node <i>n</i> that assigns the value to the variable <i>a</i> (ie, <!-- MATH
+ $a\in
+def[n]$
+ -->
+<i>a</i> <img src="node40_files/img3.png" alt="$ \in$" align="MIDDLE" border="0" height="35" width="17"> <i>def</i>[<i>n</i>]) we add the edges <!-- MATH
+ $(a,b_1),\,(a,b_2),\ldots,(a,b_m)$
+ -->
+(<i>a</i>, <i>b</i><sub>1</sub>),&nbsp;(<i>a</i>, <i>b</i><sub>2</sub>),...,(<i>a</i>, <i>b</i><sub>m</sub>), where
+<!-- MATH
+ $out[n]=\{b_1,b_2,\ldots,b_m\}$
+ -->
+<i>out</i>[<i>n</i>] = {<i>b</i><sub>1</sub>, <i>b</i><sub>2</sub>,..., <i>b</i><sub>m</sub>}. There is a special case when <i>n</i> is a
+move command: <!-- MATH
+ $a\leftarrow c$
+ -->
+<i>a</i> <img src="node40_files/img1.png" alt="$ \leftarrow$" align="BOTTOM" border="0" height="19" width="24"> <i>c</i>; in that case we do not add the edge
+(<i>a</i>, <i>b</i><sub>k</sub>) if <i>b</i><sub>k</sub> = <i>c</i>. For example, the previous program
+has an interference graph with three nodes: <code>a</code>, <code>b</code>, and <code>c</code>,
+and two edges: <code>a-c</code> and <code>b-c</code>.
+
+</p><p>
+The following is a larger example:
+<br><table border="1" cellpadding="3">
+<tbody><tr><td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">x</td>
+<td align="LEFT">y</td>
+<td align="LEFT">z</td>
+<td align="LEFT">w</td>
+<td align="LEFT">u</td>
+<td align="LEFT">v</td>
+</tr>
+<tr><td align="LEFT">1.</td>
+<td align="LEFT">v := 1</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+</tr>
+<tr><td align="LEFT">2.</td>
+<td align="LEFT">z := v+1</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">X</td>
+</tr>
+<tr><td align="LEFT">3.</td>
+<td align="LEFT">x := z * v</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">X</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">X</td>
+</tr>
+<tr><td align="LEFT">4.</td>
+<td align="LEFT">y := x * 2</td>
+<td align="LEFT">X</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">X</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+</tr>
+<tr><td align="LEFT">5.</td>
+<td align="LEFT">w := x+z * y</td>
+<td align="LEFT">X</td>
+<td align="LEFT">X</td>
+<td align="LEFT">X</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+</tr>
+<tr><td align="LEFT">6.</td>
+<td align="LEFT">u := z+2</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">X</td>
+<td align="LEFT">X</td>
+<td align="LEFT">X</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+</tr>
+<tr><td align="LEFT">7.</td>
+<td align="LEFT">v := u+w+y</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">X</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">X</td>
+<td align="LEFT">X</td>
+<td align="LEFT">&nbsp;</td>
+</tr>
+<tr><td align="LEFT">8.</td>
+<td align="LEFT">return v * u</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">&nbsp;</td>
+<td align="LEFT">X</td>
+<td align="LEFT">X</td>
+</tr>
+</tbody></table>
+<br>
+For example, <i>v</i> is used in line 3 and the last assignment to <i>v</i> before
+this line was in line 1. So <i>v</i> is live on lines 2 and 3.
+Also <i>v</i> is used in line 8 and the last assignment to <i>v</i> before
+this line was in line 7. So <i>v</i> is also live on line 8.
+The interference graph is the following:
+
+</p><p>
+<img src="node40_files/alloc.gif" alt="alloc.gif" align="BOTTOM" border="0" height="160" width="160">
+
+</p><p>
+</p><hr>
+<!--Navigation Panel-->
+<a name="tex2html597" href="http://lambda.uta.edu/cse5317/notes/node41.html">
+<img alt="next" src="node40_files/next.png" align="BOTTOM" border="0" height="24" width="37"></a> 
+<a name="tex2html593" href="http://lambda.uta.edu/cse5317/notes/notes.html">
+<img alt="up" src="node40_files/up.png" align="BOTTOM" border="0" height="24" width="26"></a> 
+<a name="tex2html587" href="http://lambda.uta.edu/cse5317/notes/node39.html">
+<img alt="previous" src="node40_files/prev.png" align="BOTTOM" border="0" height="24" width="63"></a> 
+<a name="tex2html595" href="http://lambda.uta.edu/cse5317/notes/node1.html">
+<img alt="contents" src="node40_files/contents.png" align="BOTTOM" border="0" height="24" width="65"></a>  
+<br>
+<b> Next:</b> <a name="tex2html598" href="http://lambda.uta.edu/cse5317/notes/node41.html">12 Register Allocation</a>
+<b> Up:</b> <a name="tex2html594" href="http://lambda.uta.edu/cse5317/notes/notes.html">CSE 5317/4305: Design and</a>
+<b> Previous:</b> <a name="tex2html588" href="http://lambda.uta.edu/cse5317/notes/node39.html">10 Instruction Selection</a>
+ &nbsp; <b>  <a name="tex2html596" href="http://lambda.uta.edu/cse5317/notes/node1.html">Contents</a></b> 
+<!--End of Navigation Panel-->
+<address>
+fegaras
+2012-01-10
+</address>
+
+
+</body></html>
