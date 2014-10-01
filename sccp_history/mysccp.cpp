@@ -184,9 +184,45 @@ bool MYSCCP::runOnFunction(Function &F) {
   return Changed;
 }
 
-void MYSCCP::getFeasibleSuccessors(TerminatorInst &TI, std::vector<bool> &Succes) 
+void MYSCCP::getFeasibleSuccessors(TerminatorInst &TI, std::vector<bool> &Succs) 
 {
+  Succs.resize(TI.getNumSuccessors());
 
+  if (BranchInst *BI = dyn_cast<BranchInst>(&TI)) {
+    if (BI->isUnconditional()) {
+      Succs[0] = true;
+    } else {
+      InstVal &BCValue = getValueState(BI->getCondition());
+      if (BCValue.isOverdefined()) {
+        Succs[0] = Succs[1] = true;
+      } else if (BCValue.isConstant()) {
+        #if 0
+        Succs[BCValue.getConstant() == ConstantBool::False] = true;
+        #else
+        Succs[BCValue.getConstant()->isZeroValue()] = true;
+        #endif
+      }
+    }
+  } else if (InvokeInst *II = dyn_cast<InvokeInst>(&TI)) {
+    Succs[0] = Succs[1] = true;
+  } else if (SwitchInst *SI = dyn_cast<SwitchInst>(&TI)) {
+    InstVal &SCValue = getValueState(SI->getCondition());
+    if (SCValue.isOverdefined()) {
+      Succs.assign(TI.getNumSuccessors(), true);
+    } else if (SCValue.isConstant()) {
+      Constant *CPV = SCValue.getConstant();
+      for (unsigned i = 1, E = SI->getNumSuccessors(); i != E; ++i) {
+        if (SI->getSuccessorValue(i) == CPV) {
+          Succs[i] = true;
+          return;
+        }
+      }
+      Succs[0] = true;
+    }
+  } else {
+    errs() << "MYSCCP: Don't know how to handle: " << TI;
+    Succs.assign(TI.getNumSuccessors(), true);
+  }
 }
 
 void isEdgeFeasible(BasicBlock *From, BasicBlock *To)
