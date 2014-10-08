@@ -1,7 +1,7 @@
 CPP := g++
 CPPFLAGS = -Wall -g
 RTTIFLAG := -fno-rtti
-COVRFLAG := -fprofile-arcs -ftest-coverage -lgcov
+COVRFLAG := #-fprofile-arcs -ftest-coverage -lgcov
 LLVMCONFIG := llvm-config
 LLVMCOMPONENTS := #--libs bitwriter
 LLVMCPPFLAGS := $(shell $(LLVMCONFIG) --cxxflags)
