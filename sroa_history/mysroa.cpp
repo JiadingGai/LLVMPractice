@@ -51,10 +51,13 @@ bool MYSROA::runOnModule(Module &M) {
       AllocaInst *AI = WorkList.back();
       WorkList.pop_back();
 
-      // We cannot transform the allocation instruction if it is an array allocation,
-      // and an allocation of a scalar value cannot be decomposed.
-      if (AI->isArrayAllocation() || (!isa<StructType>(AI->getAllocatedType()) /*&&*/))
+      // We cannot transform the allocation instruction if it is an array allocation 
+      // (allocations OF arrays are okay though), and an allocation of a scalar value 
+      // cannot be decomposed.
+      if (AI->isArrayAllocation() || (!isa<StructType>(AI->getAllocatedType()) && !isa<ArrayType>(AI->getAllocatedType())))
         continue;
+
+      const ArrayType *AT = dyn_cast<ArrayType>(AI->getAllocatedType());
 
       // Loop over the use list of the alloca. We can only transform it if there
       // are only getelementptr instructions (with a zero first index) and free
@@ -71,6 +74,15 @@ bool MYSROA::runOnModule(Module &M) {
             CannotTransform = true;
             break;
           }
+
+          // If this is an array access, check to make sure that index falls within 
+          // the array. Otherwise, we won't do the optimization.
+          if (AT && (cast<ConstantInt>(GEPI->getOperand(2))->getZExtValue() >= AT->getNumElements())) {
+            DEBUG(errs() << "Cannot Transform" << *AI << "due to users: " << User);
+            CannotTransform = true;
+            break;
+          }
+
         } else {
             DEBUG(errs() << "Cannot transform: " << *AI << " due to user: " << User);
             CannotTransform = true;
@@ -92,7 +104,6 @@ bool MYSROA::runOnModule(Module &M) {
           WorkList.push_back(NA);
         }
       } else {
-        const ArrayType *AT = dyn_cast<ArrayType>(AI->getAllocatedType());
         ElementAllocas.reserve(AT->getNumElements());
         Type *ElTy = AT->getElementType();
         for (unsigned i = 0, e = AT->getNumElements(); i != e; ++i) {
@@ -133,6 +144,7 @@ bool MYSROA::runOnModule(Module &M) {
       }
 
       AI->getParent()->getInstList().erase(AI);
+      NumReplaced++;
     }
 
     DEBUG_WITH_TYPE("MYSROA", errs() << "[FunctionName] " << F->getName() << "\n");
