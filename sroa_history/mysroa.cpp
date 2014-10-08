@@ -37,11 +37,12 @@ bool MYSROA::runOnModule(Module &M) {
       continue;
 
     std::vector<AllocaInst*> WorkList;
+
+    // Scan the entry basic block, adding any alloca's and mallocs to the WorkList
     BasicBlock &BB = F->getEntryBlock();
     for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; ++I) { 
       if (AllocaInst *A = dyn_cast<AllocaInst>(I)) {
         WorkList.push_back(A);
-        DEBUG_WITH_TYPE("MYSROA", errs() << "[WorkList] " << *A << "\n");
       }
     }
 
@@ -52,19 +53,20 @@ bool MYSROA::runOnModule(Module &M) {
 
       // We cannot transform the allocation instruction if it is an array allocation,
       // and an allocation of a scalar value cannot be decomposed.
-      if (AI->isArrayAllocation() || (!isa<StructType>(AI->getAllocatedType())))
+      if (AI->isArrayAllocation() || (!isa<StructType>(AI->getAllocatedType()) /*&&*/))
         continue;
 
-      bool CannotTransform =false;
+      // Loop over the use list of the alloca. We can only transform it if there
+      // are only getelementptr instructions (with a zero first index) and free
+      // instructions.
+      //
+      bool CannotTransform = false;
       for (Value::use_iterator I = AI->use_begin(), E = AI->use_end(); I != E; ++I) {
         Instruction *User = cast<Instruction>(*I);
         if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(User)) {
           DEBUG_WITH_TYPE("MYSROA", errs() << "[Alloca Users] " << *GEPI << "\n");
 
-          if (GEPI->getNumOperands() <= 2 || 
-              GEPI->getOperand(1) != Constant::getNullValue(Type::getInt32Ty(F->getContext())) || 
-              !isa<Constant>(GEPI->getOperand(2)) || 
-              isa<ConstantExpr>(GEPI->getOperand(2))) {
+          if (GEPI->getNumOperands() <= 2 || GEPI->getOperand(1) != Constant::getNullValue(Type::getInt32Ty(F->getContext())) || !isa<Constant>(GEPI->getOperand(2)) || isa<ConstantExpr>(GEPI->getOperand(2))) {
             DEBUG(errs() << "Cannot transform: " << *AI << " due to user: " << User);
             CannotTransform = true;
             break;
@@ -108,9 +110,8 @@ bool MYSROA::runOnModule(Module &M) {
 
       for (std::vector<Instruction*>::iterator UI = Users.begin(), EI = Users.end(); UI != EI; ++UI) {
         Instruction *User = dyn_cast<Instruction>(*UI);
-
-        DEBUG_WITH_TYPE("MYSROA", errs() << "[Users] " << *User << "\n");
         if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(User)) {
+          // We now know that the GEP is of the form: GEP <ptr>, 0, <cst>
           int64_t Idx = dyn_cast<ConstantInt>(GEPI->getOperand(2))->getSExtValue();
           assert(Idx < ElementAllocas.size() && "Index out of range?");
           AllocaInst *AllocaToUse = ElementAllocas[Idx];
@@ -121,8 +122,7 @@ bool MYSROA::runOnModule(Module &M) {
           } else {
             StringRef OldName = GEPI->getName();
             GEPI->setName("");
-            RepValue = GetElementPtrInst::Create(AllocaToUse, 
-                         std::vector<Value*>(GEPI->op_begin() + 3, GEPI->op_end()), OldName, GEPI);
+            RepValue = GetElementPtrInst::Create(AllocaToUse, std::vector<Value*>(GEPI->op_begin() + 3, GEPI->op_end()), OldName, GEPI);
           }
 
           GEPI->replaceAllUsesWith(RepValue);
