@@ -63,6 +63,7 @@ bool MYSROA::runOnModule(Module &M) {
       if (AI->isArrayAllocation() || (!isa<StructType>(AI->getAllocatedType()) && !isa<ArrayType>(AI->getAllocatedType())))
         continue;
 
+      errs() << "[Gai] " << isa<ArrayType>(AI->getAllocatedType()) << " is safe to promote " << isSafeArrayAllocaToPromote(AI) << "\n";
       // Check that all of the users of the allocation are capable of being transformed
       if (isa<StructType>(AI->getAllocatedType())) {
         if (!isSafeStructAllocaToPromote(AI))
@@ -139,7 +140,7 @@ bool MYSROA::isSafeUseOfAllocation(Instruction *User) {
   Function *F = User->getParent()->getParent();
   if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(User)) {
     // The GEP is safe to transform if it is of the form GEP <ptr>, 0, <cst>
-    if (GEPI->getNumOperands() <=2 || GEPI->getOperand(1) != Constant::getNullValue(Type::getInt32Ty(F->getContext())) || !isa<Constant>(GEPI->getOperand(2)) || isa<ConstantExpr>(GEPI->getOperand(2)))
+    if (GEPI->getNumOperands() <=2 || GEPI->getOperand(1) != Constant::getNullValue(Type::getInt64Ty(F->getContext())) || !isa<Constant>(GEPI->getOperand(2)) || isa<ConstantExpr>(GEPI->getOperand(2)))
       return false;
   } else {
     return false;
