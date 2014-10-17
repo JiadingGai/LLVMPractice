@@ -18,9 +18,6 @@ int test() {
   int x[11];
   x[6] = bar();
 
-  int *P = &x[7];
-  P = P + 1;
-
-  return /*s.Z.B[5][13] + r[10].c + x[6] +*/ *P;
+  return s.Z.B[5][13] + r[10].c + x[6];
 }
 
