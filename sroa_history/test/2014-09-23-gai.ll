@@ -11,24 +11,19 @@ entry:
   %s = alloca %struct.ST, align 8
   %r = alloca [16 x %struct.RT], align 16
   %x = alloca [11 x i32], align 16
+  %P = alloca i32*, align 8
   %call = call signext i8 (...)* @bar()
   %conv = sext i8 %call to i32
   %arrayidx = getelementptr inbounds [11 x i32]* %x, i32 0, i64 6
   store i32 %conv, i32* %arrayidx, align 4
-  %Z = getelementptr inbounds %struct.ST* %s, i32 0, i32 2
-  %B = getelementptr inbounds %struct.RT* %Z, i32 0, i32 1
-  %arrayidx1 = getelementptr inbounds [10 x [20 x i32]]* %B, i32 0, i64 5
-  %arrayidx2 = getelementptr inbounds [20 x i32]* %arrayidx1, i32 0, i64 13
-  %0 = load i32* %arrayidx2, align 4
-  %arrayidx3 = getelementptr inbounds [16 x %struct.RT]* %r, i32 0, i64 10
-  %c = getelementptr inbounds %struct.RT* %arrayidx3, i32 0, i32 2
-  %1 = load i8* %c, align 1
-  %conv4 = sext i8 %1 to i32
-  %add = add nsw i32 %0, %conv4
-  %arrayidx5 = getelementptr inbounds [11 x i32]* %x, i32 0, i64 6
-  %2 = load i32* %arrayidx5, align 4
-  %add6 = add nsw i32 %add, %2
-  ret i32 %add6
+  %arrayidx1 = getelementptr inbounds [11 x i32]* %x, i32 0, i64 7
+  store i32* %arrayidx1, i32** %P, align 8
+  %0 = load i32** %P, align 8
+  %add.ptr = getelementptr inbounds i32* %0, i64 1
+  store i32* %add.ptr, i32** %P, align 8
+  %1 = load i32** %P, align 8
+  %2 = load i32* %1, align 4
+  ret i32 %2
 }
 
 declare signext i8 @bar(...) #1
