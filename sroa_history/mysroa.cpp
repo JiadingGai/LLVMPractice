@@ -71,7 +71,7 @@ bool MYSROA::runOnModule(Module &M) {
       } else if (!isSafeArrayAllocaToPromote(AI))
         continue;
 
-      DEBUG(errs() << "Found inst to xform: " << *AI << "\n");
+      DEBUG_WITH_TYPE("MYSROA", errs() << "Found inst to xform: " << *AI << "\n");
       Changed = true;
 
       std::vector<AllocaInst*> ElementAllocas;
@@ -173,7 +173,7 @@ bool MYSROA::isSafeArrayElementUse(Value *Ptr) {
       return isSafeArrayElementUse(GEP);
     }
     default:
-      DEBUG(errs() << " Transformation preventing inst: " << *User);
+      DEBUG_WITH_TYPE("MYSROA", errs() << " Transformation preventing inst: " << *User);
       return false;
     }
   }
@@ -188,7 +188,7 @@ bool MYSROA::isSafeStructAllocaToPromote(AllocaInst *AI) {
   //
   for (Value::use_iterator I = AI->use_begin(), E = AI->use_end(); I != E; ++I)
     if (!isSafeUseOfAllocation(cast<Instruction>(*I))) {
-      DEBUG(errs() << "Cannot transform: " << *AI << "  due to user: " << *I);
+      DEBUG_WITH_TYPE("MYSROA", errs() << "Cannot transform: " << *AI << "  due to user: " << *I);
       return false;
     }
   return true;
