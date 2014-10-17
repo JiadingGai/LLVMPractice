@@ -198,6 +198,7 @@ bool MYSROA::isSafeStructAllocaToPromote(AllocaInst *AI) {
 /// structure can be broken down into elements
 /// 
 bool MYSROA::isSafeArrayAllocaToPromote(AllocaInst *AI) {
+  errs() << "[gaiiii]: " << *AI << "\n";
   const ArrayType *AT = cast<ArrayType>(AI->getAllocatedType());  
   int64_t NumElements = AT->getNumElements();
 
