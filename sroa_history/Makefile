@@ -8,10 +8,9 @@ LLVMCPPFLAGS := $(shell $(LLVMCONFIG) --cxxflags)
 LLVMLDFLAGS := $(shell $(LLVMCONFIG) --ldflags $(LLVMCOMPONENTS))
 LLVMVER := LLVM_34
 
-MYUTIL = barrier_inst.cpp \
+MYUTIL = 
 
-MYPASS = inline_devicefn.cpp \
-         mysroa.cpp
+MYPASS = mysroa.cpp
 
 UTIL_OBJS=$(MYUTIL:.cpp=.o)
 PASS_OBJS=$(MYPASS:.cpp=.o)
