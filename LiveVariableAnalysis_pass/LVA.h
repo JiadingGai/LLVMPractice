@@ -7,7 +7,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/ValueMap.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Constants.h"
 

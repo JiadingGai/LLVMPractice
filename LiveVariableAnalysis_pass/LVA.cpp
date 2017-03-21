@@ -2,7 +2,7 @@
 
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/CFG.h"
+#include "llvm/Analysis/CFG.h"
 // MXPA
 #include "LVA.h"
 
@@ -20,17 +20,17 @@ namespace LLVMPractice {
 
     for (Function::arg_iterator I = F.arg_begin(), E = F.arg_end(); I != E; ++I)
     {
-      instToLatticeBit.insert(std::make_pair(I, InstrIdx));
+      instToLatticeBit.insert(std::make_pair(&*I, InstrIdx));
       InstrIdx++;
     }
 
     for (Function::iterator ib = F.begin(), eb = F.end(); ib != eb; ++ib)
     {
-      BasicBlock *BB = ib;
+      BasicBlock *BB = &*ib;
       for (BasicBlock::iterator iI = BB->begin(), iE = BB->end(); iI != iE; ++iI) 
       {
-        Instruction *I = iI;
-        instToLatticeBit.insert(std::make_pair(I, InstrIdx));
+        Instruction *I = &*iI;
+        instToLatticeBit.insert(std::make_pair(&*I, InstrIdx));
         InstrIdx++;
       }
     }
@@ -40,9 +40,9 @@ namespace LLVMPractice {
   {
     for (Function::iterator ib = F.begin(), ie = F.end(); ib != ie; ++ib)
     {
-      BasicBlock *BB = ib;
+      BasicBlock *BB = &*ib;
       struct BasicBlockLivenessInfo *BBLI = new BasicBlockLivenessInfo(BB, defcount);
-      blockToInfo.insert(std::make_pair(ib, BBLI));
+      blockToInfo.insert(std::make_pair(&*ib, BBLI));
     }
   }
   
@@ -52,7 +52,7 @@ namespace LLVMPractice {
 
     for (BasicBlock::iterator iI = BB->begin(), iE = BB->end(); iI != iE; ++iI)
     {
-      blockInfo->def->set(getLatticeBit(iI));  
+      blockInfo->def->set(getLatticeBit(&*iI));  
     }
   }
   
@@ -88,17 +88,17 @@ namespace LLVMPractice {
   {
     for (Function::iterator ib = F.begin(), ie = F.end(); ib != ie; ++ib)
     {
-      BasicBlock *BB = ib;
+      BasicBlock *BB = &*ib;
       for (BasicBlock::iterator iI = BB->begin(), iE = BB->end(); iI != iE; ++iI)
       {
-        Instruction *I = iI;
+        Instruction *I = &*iI;
         markUses(I->use_begin(), I->use_end(), I, getLatticeBit(I));
       }
     }
 
     for (Function::arg_iterator ia = F.arg_begin(), ie = F.arg_end(); ia != ie; ++ia)
     {
-      markUses(ia->use_begin(), ia->use_end(), NULL, getLatticeBit(ia));
+      markUses(ia->use_begin(), ia->use_end(), NULL, getLatticeBit(&*ia));
     }
   }
   
@@ -143,7 +143,7 @@ namespace LLVMPractice {
   void LiveVariableAnalysis::initMask(FlowMask &mask, Function &F)
   {
      for (Function::iterator blockIt = F.begin(); blockIt != F.end(); blockIt++) {
-        BasicBlock *phiBlock = blockIt;
+        BasicBlock *phiBlock = &*blockIt;
 
         BitVector initialMask = getMaskPhiValues(phiBlock);
 
@@ -224,7 +224,7 @@ namespace LLVMPractice {
     initBlocksInfo(defcount, F);
 
     //3. Initialize def and use sets
-    initEntryArgDef(blockToInfo[F.begin()], F.arg_size());
+    initEntryArgDef(blockToInfo[&*F.begin()], F.arg_size());
     for (BlockInfoMapping::iterator BIMit = blockToInfo.begin(), BIMie = blockToInfo.end(); BIMit != BIMie; ++BIMit)
     {
       initBlockDef(BIMit->second);
@@ -242,20 +242,20 @@ namespace LLVMPractice {
         inChanged = false;
         // out[B] = U(in[S] & mask[B][S]) where B < S
         for (Function::iterator B = F.begin(); B != F.end(); B++) {
-            (blockToInfo[B]->out)->reset();
-            for (succ_iterator succIt = succ_begin(B); succIt != succ_end(B); succIt++) {
+            (blockToInfo[&*B]->out)->reset();
+            for (succ_iterator succIt = succ_begin(&*B); succIt != succ_end(&*B); succIt++) {
                 BasicBlock *S = *succIt;
-                std::pair<BasicBlock *, BasicBlock *> key = std::make_pair(B, S);
+                std::pair<BasicBlock *, BasicBlock *> key = std::make_pair(&*B, S);
                 if (mask.find(key) != mask.end()) {
-                    *(blockToInfo[B]->out) |= ((*(blockToInfo[S]->in)) & (*(mask[key])));
+                    *(blockToInfo[&*B]->out) |= ((*(blockToInfo[S]->in)) &= (*(mask[key])));
                 } else {
-                    *(blockToInfo[B]->out) |= *(blockToInfo[S]->in);
+                    *(blockToInfo[&*B]->out) |= *(blockToInfo[S]->in);
                 }
             }
             // in[B] = use[B] U (out[B] - def[B])
-            BitVector oldIn = *(blockToInfo[B]->in);
+            BitVector oldIn = *(blockToInfo[&*B]->in);
             //*(blockToInfo[B]->in) = (*(blockToInfo[B]->use) | (*(blockToInfo[B]->out) & ~(*(blockToInfo[B]->def))));
-            if (*(blockToInfo[B]->in) != oldIn) {
+            if (*(blockToInfo[&*B]->in) != oldIn) {
                 inChanged = true;
             }
         }
