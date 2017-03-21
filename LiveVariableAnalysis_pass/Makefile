@@ -1,8 +1,8 @@
 CPP := g++
-CPPFLAGS = -Wall -g
+CPPFLAGS = -Wall
 RTTIFLAG := -fno-rtti
 LLVMCONFIG := llvm-config
-LLVMCOMPONENTS := --libs Core --system-libs
+LLVMCOMPONENTS := #--libs Core --system-libs
 LLVMCPPFLAGS := $(shell $(LLVMCONFIG) --cxxflags)
 LLVMLDFLAGS := $(shell $(LLVMCONFIG) --ldflags $(LLVMCOMPONENTS))
 LLVMVER := LLVM_33
@@ -19,7 +19,9 @@ all:$(SOS)
 %.so:$(UTIL_OBJS) %.o
 	$(CPP) -shared -o $@ $^ $(LLVMLDFLAGS) -Wall
 %.o:%.cpp %.h
-	$(CPP) -fPIC -g -c $^ $(LLVMCPPFLAGS) -Wall -D$(LLVMVER)
+	$(CPP) -fPIC -O3 -c $^ $(LLVMCPPFLAGS) -Wall -D$(LLVMVER)
+run:
+	opt -S -load ./LVA.so -practice_lva < fib.ll
 clean:
 	rm -f *.so *.o *.bc *.gch
 
