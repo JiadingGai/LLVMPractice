@@ -1,9 +1,9 @@
-CPP := clang++
-CPPFLAGS = -Wall -g
+CPP := g++
+CPPFLAGS = -Wall -O3
 RTTIFLAG := -fno-rtti
 COVRFLAG := #-fprofile-arcs -ftest-coverage -lgcov
 LLVMCONFIG := llvm-config
-LLVMCOMPONENTS := --libs Analysis --system-libs
+LLVMCOMPONENTS := #--libs Analysis --system-libs
 LLVMCPPFLAGS := $(shell $(LLVMCONFIG) --cxxflags)
 LLVMLDFLAGS := $(shell $(LLVMCONFIG) --ldflags $(LLVMCOMPONENTS))
 LLVMVER := LLVM_34
@@ -20,8 +20,8 @@ all:$(SOS)
 %.so:$(UTIL_OBJS) %.o
 	$(CPP) -shared -o $@ $^ $(LLVMLDFLAGS) -Wall $(COVRFLAG)
 %.o:%.cpp 
-	$(CPP) -fPIC -g -c $^ $(LLVMCPPFLAGS) $(COVRFLAG) -Wall -D$(LLVMVER)
+	$(CPP) -fPIC -c $^ $(LLVMCPPFLAGS) $(COVRFLAG) -Wall -D$(LLVMVER)
 run:
-	opt -S -load ./hw.dylib -hello < fib.ll > /dev/null
+	opt -S -load ./hw.so -hellogai < fib.ll > /dev/null
 clean:
 	rm -f *.so *.o *.bc *.gch *.dot .*.sw* *.gcov *.gcda *.gcno
